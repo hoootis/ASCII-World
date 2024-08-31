@@ -17,6 +17,10 @@ global using MonoMod.RuntimeDetour;
 global using UnityEngine.Assertions;
 global using UnityEngine.PlayerLoop;
 global using System.IO;
+using On.Menu;
+
+[module: UnverifiableCode]
+[assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
 namespace ASCIIWorld;
 
@@ -26,10 +30,11 @@ sealed class Plugin : BaseUnityPlugin
     public const string MOD_ID = "cactus.ascii";
     public const string MOD_NAME = "ASCII";
     public const string VERSION = "1.0";
-    public const string AUTHORS = "SlightlyOverGrownCactus";
+    public const string AUTHORS = "ASlightlyOverGrownCactus";
     
     static bool loaded = false;
     public static Shader ASCIIShader;
+    public static Shader ASCIIStencil;
     public static Texture2D[] asciiTextures = new Texture2D[2];
     public static MaterialPropertyBlock asciiTexBlock;
 
@@ -38,6 +43,9 @@ sealed class Plugin : BaseUnityPlugin
         try
         {
             On.RainWorld.OnModsInit += RainWorldOnOnModsInit;
+            On.Menu.Dialog.ctor_ProcessManager += DialogOnctor_ProcessManager;
+            On.FLabel.ctor_string_string += FLabelOnctor_string_string;
+            On.FButton.ctor_string_string_string_string += FButtonOnctor_string_string_string_string;
         }
         catch (Exception e)
         {
@@ -47,6 +55,24 @@ sealed class Plugin : BaseUnityPlugin
         }
     }
 
+    private void FButtonOnctor_string_string_string_string(On.FButton.orig_ctor_string_string_string_string orig, FButton self, string upelementname, string downelementname, string overelementname, string clicksoundname)
+    {
+        orig(self, upelementname, downelementname, overelementname, clicksoundname);
+        self.sprite.shader = FShader.CreateShader("ASCIIStencil", ASCIIStencil);
+    }
+
+    private void FLabelOnctor_string_string(On.FLabel.orig_ctor_string_string orig, FLabel self, string fontname, string text)
+    {
+        orig(self, fontname, text);
+        self.shader = FShader.CreateShader("ASCIIStencil", ASCIIStencil);
+    }
+
+    private void DialogOnctor_ProcessManager(Dialog.orig_ctor_ProcessManager orig, Menu.Dialog self, ProcessManager manager)
+    {
+        orig(self, manager);
+        self.darkSprite.shader = FShader.CreateShader("ASCIIStencil", ASCIIStencil);
+    }
+
     private void RainWorldOnOnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
     {
         orig(self);
@@ -54,6 +80,7 @@ sealed class Plugin : BaseUnityPlugin
         {
             if (loaded) return;
             loaded = true;
+            ShaderBuffer.Initialize();
 
             MachineConnector.SetRegisteredOI("cactus.ascii", ASCIIOptions.Instance);
             var bundle = AssetBundle.LoadFromFile(AssetManager.ResolveFilePath("assets/asciiworld")); // Load asset bundle from assets folder
@@ -68,6 +95,7 @@ sealed class Plugin : BaseUnityPlugin
             
             // Shaders
             ASCIIShader = bundle.LoadAsset<Shader>("Assets/ASCIIPROJECT/ASCII.shader"); // Loads shader from asset bundle.
+            ASCIIStencil = bundle.LoadAsset<Shader>("Assets/ASCIIPROJECT/BasicStencil.shader");
             Camera.main.gameObject.AddComponent<ASCIIScreen>();
         }
         catch (Exception e)
@@ -96,6 +124,7 @@ public class ASCIIScreen : MonoBehaviour
     void OnRenderImage(RenderTexture src, RenderTexture dest)
     {
         // TODO: Add in contrast and offset setting
+        asciiMat.SetTexture("_ASCIIKarmaTex", Plugin.asciiTexBlock.GetTexture("_ASCIIKarmaTex"));
         Graphics.Blit(src, dest, asciiMat);
     }
 

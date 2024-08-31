@@ -13,8 +13,67 @@ Shader"Unlit/ASCII"
         Tags { "RenderType"="Opaque" }
         LOD 100
 
+            Pass
+                    {
+                        Stencil
+			            {
+                            Ref 1
+				            Comp Equal
+				            Pass Keep
+			            }
+                        CGPROGRAM
+                   #pragma vertex vert
+                   #pragma fragment frag
+                   // make fog work
+                   #pragma multi_compile_fog
+
+            #include "UnityCG.cginc"
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                float2 uv : TEXCOORD0;
+            };
+
+            struct v2f
+            {
+                float4 pos : SV_POSITION;
+                float2 uv : TEXCOORD0;
+                float4 scrPos : TEXCOORD1;
+                float4 clr : COLOR;
+            };
+
+            sampler2D _MainTex;
+            sampler2D _ASCIIKarmaTex;
+            float4 _MainTex_ST;
+            uniform float _TexWidth;
+
+            v2f vert(appdata v)
+            {
+                v2f o;
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.pos = UnityObjectToClipPos(v.vertex);
+                UNITY_TRANSFER_FOG(o, o.vertex);
+                o.scrPos = ComputeScreenPos(o.pos);
+                return o;
+            }
+
+            fixed4 frag(v2f i) : SV_Target
+            {
+                float4 finalCol = tex2D(_MainTex, i.uv);
+                return finalCol;
+            }
+            ENDCG
+        }
+
         Pass
         {
+            Stencil
+			{
+                Ref 1
+				Comp NotEqual
+				Pass Keep
+			}
             CGPROGRAM
             #pragma vertex vert
             #pragma fragment frag
@@ -84,7 +143,7 @@ Shader"Unlit/ASCII"
                 
                 finalCol.rgb *= col.rgb;
                 return finalCol;
-}
+            }
             ENDCG
         }
     }
