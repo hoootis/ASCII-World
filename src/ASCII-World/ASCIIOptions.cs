@@ -1,4 +1,11 @@
-﻿namespace ASCIIWorld;
+﻿using System.Collections.Generic;
+using JetBrains.Annotations;
+using Menu.Remix.MixedUI;
+using Menu.Remix.MixedUI.ValueTypes;
+using UnityEngine;
+using MenuObject = Menu.MenuObject;
+
+namespace ASCII_World;
 
 public class ASCIIOptions : OptionInterface
 {

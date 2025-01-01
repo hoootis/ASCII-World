@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 
-namespace ASCIIWorld {
+namespace ASCII_World {
 	public static class ShaderBuffer {
 
 		/// <summary>

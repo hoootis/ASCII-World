@@ -1,0 +1,12 @@
+{
+	"id": "cactus.ascii",
+	"name": "ASCII World",
+	"version": "1.0",
+	"hide_version": false,
+	"authors": "Cactus",
+	"description": "Adds an ASCII Shader to the game!\nGood luck playing it...",
+	"requirements": [],
+	"requirements_names": [],
+	"checksum_override_version": false,
+	"tags": [ "Cosmetics" ]
+}

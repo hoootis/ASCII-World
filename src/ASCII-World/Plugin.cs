@@ -1,31 +1,17 @@
-﻿global using System.Collections.Generic;
-global using BepInEx.Logging;
-global using JetBrains.Annotations;
-global using Menu.Remix.MixedUI;
-global using Menu.Remix.MixedUI.ValueTypes;
-global using UnityEngine;
-global using System;
-global using System.Linq;
-global using System.Text;
-global using System.Threading.Tasks;
-global using BepInEx;
-global using System.Security.Permissions;
-global using RWCustom;
-global using System.Security;
-global using System.Reflection;
-global using MonoMod.RuntimeDetour;
-global using UnityEngine.Assertions;
-global using UnityEngine.PlayerLoop;
-global using System.IO;
-using On.Menu;
+﻿using Menu.Remix.MixedUI;
+using UnityEngine;
+using System;
+using BepInEx;
+using System.Security.Permissions;
+using System.Security;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
-namespace ASCIIWorld;
+namespace ASCII_World;
 
-[BepInPlugin(GUID: MOD_ID, Name: MOD_NAME, Version: VERSION)]
-sealed class Plugin : BaseUnityPlugin
+[BepInEx.BepInPlugin(GUID: MOD_ID, Name: MOD_NAME, Version: VERSION)]
+public class Plugin : BepInEx.BaseUnityPlugin
 {
     public const string MOD_ID = "cactus.ascii";
     public const string MOD_NAME = "ASCII";
@@ -35,54 +21,47 @@ sealed class Plugin : BaseUnityPlugin
     static bool loaded = false;
     public static Shader ASCIIShader;
     public static Shader ASCIIStencil;
-    public static Texture2D[] asciiTextures = new Texture2D[2];
+    public static Shader test;
+    public static Texture2D[] asciiTextures = new Texture2D[3];
     public static MaterialPropertyBlock asciiTexBlock;
+    public static FSprite asciiSprite = new FSprite("pixel") { scaleX = 1366f, scaleY = 768f};
 
     public void OnEnable()
     {
+        Debug.Log("ermmmmmwtf");
         try
         {
             On.RainWorld.OnModsInit += RainWorldOnOnModsInit;
-            On.Menu.Dialog.ctor_ProcessManager += DialogOnctor_ProcessManager;
-            On.FLabel.ctor_string_string += FLabelOnctor_string_string;
-            On.FButton.ctor_string_string_string_string += FButtonOnctor_string_string_string_string;
+            On.RainWorld.Update += RainWorldOnUpdate;
+            On.Menu.Menu.ctor += MenuOnctor;
+            Logger.LogDebug("onenableweirdness");
         }
         catch (Exception e)
         {
-            Debug.LogError(e);
+            Logger.LogDebug(e);
             Debug.LogException(e);
             throw new Exception("Exception from ASCIIWorld: " + e);
         }
     }
 
-    private void FButtonOnctor_string_string_string_string(On.FButton.orig_ctor_string_string_string_string orig, FButton self, string upelementname, string downelementname, string overelementname, string clicksoundname)
+    private void MenuOnctor(On.Menu.Menu.orig_ctor orig, Menu.Menu self, ProcessManager manager, ProcessManager.ProcessID id)
     {
-        orig(self, upelementname, downelementname, overelementname, clicksoundname);
-        self.sprite.shader = FShader.CreateShader("ASCIIStencil", ASCIIStencil);
-    }
-
-    private void FLabelOnctor_string_string(On.FLabel.orig_ctor_string_string orig, FLabel self, string fontname, string text)
-    {
-        orig(self, fontname, text);
-        self.shader = FShader.CreateShader("ASCIIStencil", ASCIIStencil);
-    }
-
-    private void DialogOnctor_ProcessManager(Dialog.orig_ctor_ProcessManager orig, Menu.Dialog self, ProcessManager manager)
-    {
-        orig(self, manager);
-        self.darkSprite.shader = FShader.CreateShader("ASCIIStencil", ASCIIStencil);
+        orig(self, manager, id);
+        Logger.LogDebug("Haiiii");
+        self.container.AddChild(asciiSprite);
+        asciiSprite.SetPosition(0, 0);
+        asciiSprite._isVisible = true;
     }
 
     private void RainWorldOnOnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
     {
         orig(self);
-        try
-        {
+            Debug.LogWarning("loading ascii ermmm");
             if (loaded) return;
             loaded = true;
-            ShaderBuffer.Initialize();
 
             MachineConnector.SetRegisteredOI("cactus.ascii", ASCIIOptions.Instance);
+            
             var bundle = AssetBundle.LoadFromFile(AssetManager.ResolveFilePath("assets/asciiworld")); // Load asset bundle from assets folder
 
             asciiTexBlock = new();
@@ -92,18 +71,20 @@ sealed class Plugin : BaseUnityPlugin
             ASCIIOptions.asciiTextures.Add(new ListItem("KarmaASCII"));
             asciiTextures[1] = bundle.LoadAsset<Texture2D>("Assets/ASCIIPROJECT/Textures/1x0 8x8 3.png");
             ASCIIOptions.asciiTextures.Add(new ListItem("AcerolaASCII"));
+            asciiTextures[2] = bundle.LoadAsset<Texture2D>("Assets/ASCIIPROJECT/Textures/hootisicons.png");
+            ASCIIOptions.asciiTextures.Add(new ListItem("HootisASCII"));
             
             // Shaders
             ASCIIShader = bundle.LoadAsset<Shader>("Assets/ASCIIPROJECT/ASCII.shader"); // Loads shader from asset bundle.
             ASCIIStencil = bundle.LoadAsset<Shader>("Assets/ASCIIPROJECT/BasicStencil.shader");
-            Camera.main.gameObject.AddComponent<ASCIIScreen>();
-        }
-        catch (Exception e)
-        {
-            Debug.LogError(e);
-            Debug.LogException(e);
-            throw new Exception("Error trying to load OnModsInit ASCIIWorld");
-        }
+            test = bundle.LoadAsset<Shader>("Assets/shaders 1.9.03/TestShader.shader");
+
+            asciiSprite.shader = self.Shaders["Hologram"]; //FShader.CreateShader("test", test);
+    }
+    
+    private void RainWorldOnUpdate(On.RainWorld.orig_Update orig, RainWorld self)
+    {
+        orig(self);
     }
 }
 
@@ -132,8 +113,8 @@ public class ASCIIScreen : MonoBehaviour
     {
         if (menuLoaded)
         {
-            Plugin.asciiTexBlock.SetTexture("_ASCIIKarmaTex", GetASCII(ASCIIOptions.ASCIITexF));
-            Plugin.asciiTexBlock.SetFloat("_TexWidth", GetASCIIWidth(ASCIIOptions.ASCIITexF));
+            Plugin.asciiTexBlock.SetTexture("_ASCIIKarmaTex", Plugin.asciiTextures[2]);
+            Plugin.asciiTexBlock.SetFloat("_TexWidth", 32);
 
             contrast = ASCIIOptions.contrastF / 100f;
             offset = ASCIIOptions.offsetF / 100f;
@@ -141,8 +122,8 @@ public class ASCIIScreen : MonoBehaviour
         }
         else
         {
-            Plugin.asciiTexBlock.SetTexture("_ASCIIKarmaTex", GetASCII(ASCIIOptions.ASCIITex.Value));
-            Plugin.asciiTexBlock.SetFloat("_TexWidth", GetASCIIWidth(ASCIIOptions.ASCIITex.Value));
+            Plugin.asciiTexBlock.SetTexture("_ASCIIKarmaTex", Plugin.asciiTextures[2]);
+            Plugin.asciiTexBlock.SetFloat("_TexWidth", 32);
 
             contrast = ASCIIOptions.contrast.Value / 100f;
             offset = ASCIIOptions.offset.Value / 100f;

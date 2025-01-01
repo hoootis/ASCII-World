@@ -6,3 +6,6 @@
 src/ASCIIWorld.sln
 /src/bin
 /src/obj
+/src/ASCII-World/.idea
+/src/ASCII-World/obj
+/src/lib
